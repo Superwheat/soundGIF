@@ -12,8 +12,10 @@ In the release archive, use the installer beside the `soundGif` folder:
 - macOS: double-click `install-macos.command`.
 - Linux: run `bash install-linux.sh`.
 
-The same installer updates or repairs the custom Vencord build. For a manual install, copy this
-folder to `Vencord/src/userplugins/soundGif`, then run:
+The installer menu also has an automatic option. It registers a per-user background check that
+updates the source and repairs the Vencord patch if a Discord update removes it.
+
+For a manual install, copy this folder to `Vencord/src/userplugins/soundGif`, then run:
 
 ```sh
 pnpm build

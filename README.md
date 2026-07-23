@@ -105,6 +105,10 @@ Each installer is one standalone file. Each run updates the SoundGIF and Vencord
 repairs the custom build if a later Vencord update replaces it. Restart Discord and enable
 **SoundGIF** in Vencord settings afterward.
 
+The installer menu can enable a per-user automatic check. It runs at sign-in and every 15 minutes,
+rebuilds when SoundGIF or Vencord changed, and repairs the selected Stable, PTB, or Canary Discord
+install if its Vencord patch is gone. The same menu can disable and remove the scheduled check.
+
 Git, Node.js, and pnpm are required because Vencord does not load external user plugins without
 being built from source.
 
