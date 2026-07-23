@@ -14,6 +14,10 @@ enum AppEvent {
     PickVideo,
     PickGif,
     Save,
+    WindowClose,
+    WindowDrag,
+    WindowMinimize,
+    WindowToggleMaximize,
     SetQuality(String),
     DragActive(bool),
     Converted(Result<ReadyFile, String>),
@@ -25,6 +29,10 @@ enum UiAction {
     PickVideo,
     PickGif,
     Save,
+    WindowClose,
+    WindowDrag,
+    WindowMinimize,
+    WindowToggleMaximize,
     QualityCompact,
     QualityBalanced,
     QualityHigh,
@@ -57,6 +65,7 @@ fn run() -> Result<(), String> {
         .with_title("SoundGIF")
         .with_inner_size(LogicalSize::new(980.0, 760.0))
         .with_min_inner_size(LogicalSize::new(680.0, 600.0))
+        .with_decorations(false)
         .with_visible(false)
         .build(&event_loop)
         .map_err(|error| format!("cannot create the app window: {error}"))?;
@@ -74,6 +83,10 @@ fn run() -> Result<(), String> {
                     UiAction::PickVideo => AppEvent::PickVideo,
                     UiAction::PickGif => AppEvent::PickGif,
                     UiAction::Save => AppEvent::Save,
+                    UiAction::WindowClose => AppEvent::WindowClose,
+                    UiAction::WindowDrag => AppEvent::WindowDrag,
+                    UiAction::WindowMinimize => AppEvent::WindowMinimize,
+                    UiAction::WindowToggleMaximize => AppEvent::WindowToggleMaximize,
                     UiAction::QualityCompact => AppEvent::SetQuality("compact".to_owned()),
                     UiAction::QualityBalanced => AppEvent::SetQuality("balanced".to_owned()),
                     UiAction::QualityHigh => AppEvent::SetQuality("high".to_owned()),
@@ -139,6 +152,19 @@ fn run() -> Result<(), String> {
         *control_flow = ControlFlow::Wait;
         match event {
             Event::UserEvent(AppEvent::SetQuality(value)) => quality = value,
+            Event::UserEvent(AppEvent::WindowDrag) => {
+                let _ = window.drag_window();
+            }
+            Event::UserEvent(AppEvent::WindowMinimize) => window.set_minimized(true),
+            Event::UserEvent(AppEvent::WindowToggleMaximize) => {
+                window.set_maximized(!window.is_maximized());
+            }
+            Event::UserEvent(AppEvent::WindowClose) => {
+                if let Some(path) = generated_temp.take() {
+                    let _ = std::fs::remove_file(path);
+                }
+                *control_flow = ControlFlow::Exit;
+            }
             Event::UserEvent(AppEvent::DragActive(active)) => {
                 let _ = webview.evaluate_script(if active {
                     "nativeDragActive(true);"
@@ -354,6 +380,10 @@ fn action_from_message(message: &str) -> Option<UiAction> {
         "pick-video" => Some(UiAction::PickVideo),
         "pick-gif" => Some(UiAction::PickGif),
         "save" => Some(UiAction::Save),
+        "window:close" => Some(UiAction::WindowClose),
+        "window:drag" => Some(UiAction::WindowDrag),
+        "window:minimize" => Some(UiAction::WindowMinimize),
+        "window:toggle-maximize" => Some(UiAction::WindowToggleMaximize),
         "quality:compact" => Some(UiAction::QualityCompact),
         "quality:balanced" => Some(UiAction::QualityBalanced),
         "quality:high" => Some(UiAction::QualityHigh),
@@ -489,6 +519,10 @@ mod tests {
             ("pick-video", UiAction::PickVideo),
             ("pick-gif", UiAction::PickGif),
             ("save", UiAction::Save),
+            ("window:close", UiAction::WindowClose),
+            ("window:drag", UiAction::WindowDrag),
+            ("window:minimize", UiAction::WindowMinimize),
+            ("window:toggle-maximize", UiAction::WindowToggleMaximize),
             ("quality:compact", UiAction::QualityCompact),
             ("quality:balanced", UiAction::QualityBalanced),
             ("quality:high", UiAction::QualityHigh),

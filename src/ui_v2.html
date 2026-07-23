@@ -22,7 +22,7 @@
     .app { height: 100vh; display: grid; grid-template-rows: 52px 44px minmax(0,1fr) 28px; }
     .titlebar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 18px; background: #1d1f24; border-bottom: 1px solid #2e3138;
+      padding-left: 14px; background: #1d1f24; border-bottom: 1px solid #2e3138;
     }
     .identity { display: flex; align-items: center; min-width: 0; }
     .app-icon {
@@ -32,8 +32,16 @@
     .app-icon svg { width: 17px; height: 17px; }
     .app-name { font-weight: 650; color: #f3f4f6; letter-spacing: -.01em; }
     .app-description { margin-left: 10px; color: #7f858f; font-size: 11px; }
-    .runtime { display: flex; align-items: center; gap: 6px; color: #8d939c; font-size: 11px; }
+    .runtime { display: flex; align-items: center; gap: 6px; margin-left: auto; padding: 0 16px; color: #8d939c; font-size: 11px; }
     .runtime-dot { width: 7px; height: 7px; border-radius: 50%; background: #51b882; }
+    .window-controls { align-self: stretch; display: flex; }
+    .window-button {
+      width: 46px; height: 100%; display: grid; place-items: center;
+      border: 0; background: transparent; color: #9ba1aa; cursor: default;
+    }
+    .window-button:hover { background: #2d3036; color: #f1f2f4; }
+    .window-button.close:hover { background: #c42b3a; color: #fff; }
+    .window-button svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 
     .toolbar {
       display: flex; align-items: center; gap: 4px; padding: 0 12px;
@@ -175,6 +183,11 @@
         <span class="app-description">Create and play GIF files with embedded audio</span>
       </div>
       <div class="runtime"><span class="runtime-dot"></span>FFmpeg ready</div>
+      <div class="window-controls" aria-label="Window controls">
+        <button class="window-button" id="windowMinimize" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6.5h8"/></svg></button>
+        <button class="window-button" id="windowMaximize" aria-label="Maximize" title="Maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+        <button class="window-button close" id="windowClose" aria-label="Close" title="Close"><svg viewBox="0 0 12 12"><path d="m2.5 2.5 7 7m0-7-7 7"/></svg></button>
+      </div>
     </header>
 
     <nav class="toolbar" aria-label="File actions">
@@ -282,6 +295,15 @@
     document.querySelector('#loopToggle').addEventListener('change', event => { if (audio) audio.loop = event.target.checked; });
     document.querySelector('#volume').addEventListener('input', event => { if (audio) audio.volume = Number(event.target.value); });
     document.querySelector('#qualitySelect').addEventListener('change', event => setQuality(event.target.value));
+    document.querySelector('#windowMinimize').addEventListener('click', () => nativeAction('window:minimize'));
+    document.querySelector('#windowMaximize').addEventListener('click', () => nativeAction('window:toggle-maximize'));
+    document.querySelector('#windowClose').addEventListener('click', () => nativeAction('window:close'));
+    document.querySelector('.titlebar').addEventListener('mousedown', event => {
+      if (event.button === 0 && !event.target.closest('.window-controls')) nativeAction('window:drag');
+    });
+    document.querySelector('.titlebar').addEventListener('dblclick', event => {
+      if (!event.target.closest('.window-controls')) nativeAction('window:toggle-maximize');
+    });
 
     function setQuality(value) {
       const settings = {

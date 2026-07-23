@@ -64,6 +64,10 @@ sudo apt install libwebkit2gtk-4.1-dev
 
 The CLI and file format do not depend on a desktop webview.
 
+Release assets include Windows x64, a universal macOS build for Apple Silicon and Intel, and Linux
+x64. The macOS app is not code-signed, so the first launch may require approval in **System
+Settings > Privacy & Security**.
+
 ## CLI
 
 Create a SoundGIF from video:

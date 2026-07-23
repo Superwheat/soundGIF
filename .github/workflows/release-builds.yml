@@ -1,0 +1,110 @@
+name: Release builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the v prefix
+        required: true
+        default: 0.1.2
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release --bins
+      - name: Package
+        shell: pwsh
+        run: |
+          $name = "SoundGIF-${{ inputs.version }}-Windows-x64"
+          New-Item -ItemType Directory -Path $name | Out-Null
+          Copy-Item target/release/soundgif.exe "$name/soundgif.exe"
+          Copy-Item target/release/soundgif-player.exe "$name/soundgif-player.exe"
+          Copy-Item LICENSE "$name/LICENSE.txt"
+          Copy-Item DISTRIBUTION.txt "$name/README.txt"
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: SoundGIF-${{ inputs.version }}-Windows-x64.zip
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Build universal binaries
+        run: |
+          cargo build --release --bins --target aarch64-apple-darwin
+          cargo build --release --bins --target x86_64-apple-darwin
+          mkdir -p package/SoundGIF.app/Contents/MacOS
+          lipo -create \
+            target/aarch64-apple-darwin/release/soundgif-player \
+            target/x86_64-apple-darwin/release/soundgif-player \
+            -output package/SoundGIF.app/Contents/MacOS/soundgif-player
+          lipo -create \
+            target/aarch64-apple-darwin/release/soundgif \
+            target/x86_64-apple-darwin/release/soundgif \
+            -output package/soundgif
+          cp package/SoundGIF.app/Contents/MacOS/soundgif-player package/soundgif-player
+          chmod +x package/soundgif package/soundgif-player package/SoundGIF.app/Contents/MacOS/soundgif-player
+      - name: Create app metadata
+        run: |
+          cat > package/SoundGIF.app/Contents/Info.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDisplayName</key><string>SoundGIF</string>
+            <key>CFBundleExecutable</key><string>soundgif-player</string>
+            <key>CFBundleIdentifier</key><string>com.superwheat.soundgif</string>
+            <key>CFBundleName</key><string>SoundGIF</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>${{ inputs.version }}</string>
+            <key>CFBundleVersion</key><string>${{ inputs.version }}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          PLIST
+          cp LICENSE package/LICENSE.txt
+          cp DISTRIBUTION.txt package/README.txt
+          ditto -c -k --sequesterRsrc package "SoundGIF-${{ inputs.version }}-macOS-universal.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: SoundGIF-${{ inputs.version }}-macOS-universal.zip
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install webview dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev
+      - name: Build
+        run: cargo build --release --bins
+      - name: Package
+        run: |
+          name="SoundGIF-${{ inputs.version }}-Linux-x64"
+          mkdir "$name"
+          cp target/release/soundgif "$name/"
+          cp target/release/soundgif-player "$name/"
+          cp LICENSE "$name/LICENSE.txt"
+          cp DISTRIBUTION.txt "$name/README.txt"
+          tar -czf "$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: SoundGIF-${{ inputs.version }}-Linux-x64.tar.gz
+          if-no-files-found: error
