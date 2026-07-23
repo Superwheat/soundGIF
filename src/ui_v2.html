@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SoundGIF</title>
+  <style>
+    :root {
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      color: #e7e9ed;
+      background: #17191d;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: #17191d; user-select: none; font-size: 13px; }
+    button, select, input { font: inherit; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #6c9eff; outline-offset: 1px; }
+    button { color: inherit; }
+
+    .app { height: 100vh; display: grid; grid-template-rows: 52px 44px minmax(0,1fr) 28px; }
+    .titlebar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px; background: #1d1f24; border-bottom: 1px solid #2e3138;
+    }
+    .identity { display: flex; align-items: center; min-width: 0; }
+    .app-icon {
+      width: 28px; height: 28px; margin-right: 10px; display: grid; place-items: center;
+      border-radius: 6px; background: #4f7ed8; color: #fff;
+    }
+    .app-icon svg { width: 17px; height: 17px; }
+    .app-name { font-weight: 650; color: #f3f4f6; letter-spacing: -.01em; }
+    .app-description { margin-left: 10px; color: #7f858f; font-size: 11px; }
+    .runtime { display: flex; align-items: center; gap: 6px; color: #8d939c; font-size: 11px; }
+    .runtime-dot { width: 7px; height: 7px; border-radius: 50%; background: #51b882; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 4px; padding: 0 12px;
+      background: #202329; border-bottom: 1px solid #30333b;
+    }
+    .tool-button {
+      height: 30px; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+      border: 1px solid transparent; border-radius: 4px; background: transparent; color: #c7cbd1; cursor: pointer; text-decoration: none;
+    }
+    .tool-button:hover { border-color: #3a3e47; background: #292c33; color: #fff; }
+    .tool-button svg { width: 15px; height: 15px; color: #9ea5af; }
+    .toolbar-separator { width: 1px; height: 20px; margin: 0 5px; background: #363941; }
+    .toolbar-note { margin-left: auto; color: #727884; font-size: 11px; }
+
+    .workspace { min-height: 0; display: grid; grid-template-columns: minmax(400px,1fr) 300px; gap: 1px; background: #30333a; }
+    .viewer { min-width: 0; min-height: 0; display: grid; grid-template-rows: 36px minmax(0,1fr) auto; background: #111317; }
+    .viewer-header {
+      display: flex; align-items: center; gap: 9px; min-width: 0; padding: 0 13px;
+      border-bottom: 1px solid #292c32; background: #1c1f24; color: #a8adb6;
+    }
+    .file-type {
+      padding: 2px 5px; border-radius: 3px; background: #30343c; color: #aeb4bd;
+      font-size: 9px; font-weight: 700; letter-spacing: .05em;
+    }
+    #fileLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .verified { margin-left: auto; display: none; align-items: center; gap: 5px; color: #66bf91; font-size: 11px; }
+    .verified.visible { display: flex; }
+    .verified svg { width: 13px; height: 13px; }
+
+    .canvas {
+      position: relative; min-height: 0; display: grid; place-items: center; overflow: hidden;
+      background-color: #0e1013;
+      background-image: linear-gradient(45deg,#13161a 25%,transparent 25%),linear-gradient(-45deg,#13161a 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#13161a 75%),linear-gradient(-45deg,transparent 75%,#13161a 75%);
+      background-size: 20px 20px; background-position: 0 0,0 10px,10px -10px,-10px 0;
+    }
+    .screen { display: none; width: 100%; height: 100%; }
+    .screen.active { display: grid; place-items: center; }
+    .empty-content { width: min(460px, calc(100% - 48px)); text-align: center; }
+    .empty-icon {
+      width: 54px; height: 54px; margin: 0 auto 17px; display: grid; place-items: center;
+      border: 1px solid #383c44; border-radius: 8px; background: #1c1f24; color: #8f96a1;
+    }
+    .empty-icon svg { width: 25px; height: 25px; }
+    .empty-content h1 { margin: 0; color: #e3e5e8; font-size: 17px; font-weight: 600; }
+    .empty-content p { margin: 8px 0 17px; color: #818792; font-size: 12px; line-height: 1.5; }
+    .empty-actions { display: flex; justify-content: center; gap: 8px; }
+    .button {
+      min-height: 32px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid #42464f; border-radius: 4px; text-decoration: none;
+      background: #292d34; color: #d9dce1; cursor: pointer;
+    }
+    .button:hover { border-color: #555b66; background: #32363e; }
+    .button.primary { border-color: #5d8ce3; background: #4d7fdc; color: #fff; }
+    .button.primary:hover { background: #588ae5; }
+    .button.large { min-height: 36px; width: 100%; font-weight: 600; }
+    .button:disabled { opacity: .5; cursor: default; }
+
+    .busy-content { width: min(390px, calc(100% - 48px)); padding: 24px; text-align: center; border: 1px solid #32363e; background: #1a1d22; }
+    .spinner { width: 28px; height: 28px; margin: 0 auto 16px; border: 2px solid #353942; border-top-color: #6d9bec; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .busy-content strong { display: block; margin-bottom: 6px; font-size: 14px; }
+    .busy-content span { color: #858b95; font-size: 11px; }
+    .progress { height: 3px; margin-top: 18px; overflow: hidden; background: #30343b; }
+    .progress::after { content: ""; display: block; width: 34%; height: 100%; background: #5c8ce3; animation: progress 1.2s ease-in-out infinite; }
+    @keyframes progress { from { transform: translateX(-105%); } to { transform: translateX(310%); } }
+
+    #preview { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+    .drag-target {
+      position: absolute; inset: 12px; display: none; place-items: center; z-index: 5;
+      border: 2px dashed #6796ec; background: rgba(20,29,45,.92); color: #dbe7ff;
+    }
+    .viewer.dragging .drag-target { display: grid; }
+    .drag-target div { text-align: center; }
+    .drag-target strong { display: block; margin-bottom: 5px; font-size: 15px; }
+    .drag-target span { color: #a5b7d7; font-size: 11px; }
+
+    .transport {
+      display: none; align-items: center; gap: 5px; min-height: 46px; padding: 6px 10px;
+      border-top: 1px solid #292c32; background: #1b1e23;
+    }
+    .transport.visible { display: flex; }
+    .transport-button {
+      width: 31px; height: 31px; display: grid; place-items: center;
+      border: 1px solid #3a3e46; border-radius: 4px; background: #282b31; cursor: pointer;
+    }
+    .transport-button:hover { background: #32363d; }
+    .transport-button svg { width: 14px; height: 14px; }
+    .loop-label { display: flex; align-items: center; gap: 6px; margin-left: 6px; color: #a4aab3; font-size: 11px; }
+    .loop-label input { accent-color: #5c8ce3; }
+    #volume { width: 100px; margin-left: auto; accent-color: #5c8ce3; }
+
+    .sidebar { min-height: 0; overflow: auto; background: #202329; }
+    .side-section { display: none; min-height: 100%; padding: 20px; }
+    .side-section.active { display: flex; flex-direction: column; }
+    .side-title { margin: 0; color: #eef0f3; font-size: 14px; font-weight: 600; }
+    .side-copy { margin: 6px 0 21px; color: #828995; font-size: 11px; line-height: 1.45; }
+    .field { margin-bottom: 17px; }
+    .field label { display: block; margin-bottom: 7px; color: #aeb3bc; font-size: 11px; }
+    select {
+      width: 100%; height: 34px; padding: 0 9px; border: 1px solid #41454e; border-radius: 4px;
+      color: #e0e2e6; background: #292c33; cursor: pointer;
+    }
+    .spec-table { margin-top: 4px; border-top: 1px solid #353941; }
+    .spec-row { min-height: 35px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #353941; font-size: 11px; }
+    .spec-row span:first-child { color: #858b95; }
+    .spec-row span:last-child { color: #c3c7ce; text-align: right; }
+    .format-note { margin-top: 18px; padding: 11px; border: 1px solid #353a42; background: #24272d; color: #8f96a0; font-size: 11px; line-height: 1.45; }
+    .format-note strong { color: #c6cad0; font-weight: 600; }
+    .side-bottom { margin-top: auto; padding-top: 20px; }
+    .side-bottom .button + .button { margin-top: 7px; }
+    .result-name { margin: 0 0 4px; color: #f0f1f3; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+    .result-state { margin-bottom: 18px; color: #61bd8c; font-size: 11px; }
+    .saved-path { min-height: 32px; margin-top: 9px; color: #7f8691; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+
+    .statusbar {
+      display: flex; align-items: center; gap: 8px; padding: 0 10px;
+      border-top: 1px solid #30333a; background: #1d2025; color: #858b94; font-size: 10px;
+    }
+    .statusbar.error { color: #ef8b96; }
+    .status-separator { width: 1px; height: 13px; background: #383c44; }
+    .status-right { margin-left: auto; }
+
+    @media (max-width: 760px) {
+      .workspace { grid-template-columns: minmax(330px,1fr) 250px; }
+      .app-description, .toolbar-note { display: none; }
+      .side-section { padding: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="titlebar">
+      <div class="identity">
+        <div class="app-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div>
+        <span class="app-name">SoundGIF</span>
+        <span class="app-description">Create and play GIF files with embedded audio</span>
+      </div>
+      <div class="runtime"><span class="runtime-dot"></span>FFmpeg ready</div>
+    </header>
+
+    <nav class="toolbar" aria-label="File actions">
+      <button class="tool-button" id="toolbarVideo" data-native-action="pick-video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h10v12H4zM14 10l6-3v10l-6-3z"/></svg>Open video</button>
+      <button class="tool-button" id="toolbarGif" data-native-action="pick-gif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/></svg>Open SoundGIF</button>
+      <span class="toolbar-separator"></span>
+      <button class="tool-button" id="toolbarReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>New</button>
+      <span class="toolbar-note">Drop a video or .gif anywhere in the preview area</span>
+    </nav>
+
+    <main class="workspace">
+      <section class="viewer" id="viewer">
+        <div class="viewer-header">
+          <span class="file-type" id="fileType">EMPTY</span>
+          <span id="fileLabel">No file loaded</span>
+          <span class="verified" id="verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg>Audio verified</span>
+        </div>
+        <div class="canvas">
+          <div class="screen active" id="emptyScreen">
+            <div class="empty-content">
+              <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="m8 15 3-3 2 2 3-4 4 5"/><circle cx="9" cy="9" r="1"/></svg></div>
+              <h1>No media loaded</h1>
+              <p>Open a video to create a SoundGIF, or open an existing SoundGIF to inspect and play it.</p>
+              <div class="empty-actions">
+                <button class="button primary" id="emptyVideo" data-native-action="pick-video">Open video…</button>
+                <button class="button" id="emptyGif" data-native-action="pick-gif">Open SoundGIF…</button>
+              </div>
+            </div>
+          </div>
+          <div class="screen" id="busyScreen">
+            <div class="busy-content"><div class="spinner"></div><strong id="busyTitle">Converting video</strong><span id="busyText">Preparing frames and audio…</span><div class="progress"></div></div>
+          </div>
+          <div class="screen" id="previewScreen"><img id="preview" alt="SoundGIF preview"></div>
+          <div class="drag-target"><div><strong>Release to open</strong><span>Videos are converted · SoundGIF files are played</span></div></div>
+        </div>
+        <div class="transport" id="transport">
+          <button class="transport-button" id="playButton" aria-label="Play from beginning"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg></button>
+          <button class="transport-button" id="pauseButton" aria-label="Pause audio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg></button>
+          <label class="loop-label"><input id="loopToggle" type="checkbox" checked>Loop audio</label>
+          <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="side-section active" id="settingsSection">
+          <h2 class="side-title">Conversion settings</h2>
+          <p class="side-copy">These settings apply when you open or drop a video.</p>
+          <div class="field"><label for="qualitySelect">Output profile</label><select id="qualitySelect"><option value="compact">Compact</option><option value="balanced" selected>Balanced</option><option value="high">High quality</option></select></div>
+          <div class="spec-table">
+            <div class="spec-row"><span>Maximum width</span><span id="settingWidth">640 px</span></div>
+            <div class="spec-row"><span>Frame rate</span><span id="settingFps">15 FPS</span></div>
+            <div class="spec-row"><span>Audio</span><span id="settingAudio">Original · Opus fallback</span></div>
+            <div class="spec-row"><span>Looping</span><span>Enabled</span></div>
+          </div>
+          <div class="format-note"><strong>Compatibility:</strong> The result remains a normal GIF. Applications without SoundGIF support simply ignore the embedded audio.</div>
+          <div class="side-bottom"><button class="button primary large" id="sideVideo" data-native-action="pick-video">Open video to convert…</button></div>
+        </section>
+
+        <section class="side-section" id="resultSection">
+          <h2 class="result-name" id="resultName">soundgif.gif</h2>
+          <div class="result-state" id="resultState">SoundGIF ready</div>
+          <div class="spec-table">
+            <div class="spec-row"><span>Audio format</span><span id="metaCodec">—</span></div>
+            <div class="spec-row"><span>Audio data</span><span id="metaSize">—</span></div>
+            <div class="spec-row"><span>Start offset</span><span id="metaOffset">—</span></div>
+            <div class="spec-row"><span>Integrity</span><span id="metaIntegrity">—</span></div>
+          </div>
+          <div class="format-note" id="resultNote">The animation and audio are stored together in one GIF file.</div>
+          <div class="side-bottom">
+            <button class="button primary large" id="saveButton" data-native-action="save">Save SoundGIF as…</button>
+            <button class="button large" id="anotherButton">Open another file</button>
+            <div class="saved-path" id="savedPath"></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="statusbar" id="statusbar"><span id="statusText">Ready</span><span class="status-separator"></span><span>Local processing</span><span class="status-right">SoundGIF format 1</span></footer>
+  </div>
+
+  <script>
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    const viewer = document.querySelector('#viewer');
+    const preview = document.querySelector('#preview');
+    let audio = null, gifUrl = null, audioUrl = null, payload = null, startTimer = null;
+
+    function nativeAction(message) {
+      try { window.ipc.postMessage(message); }
+      catch (error) { setStatus(`Control connection failed: ${error.message}`, true); }
+    }
+    function nativePickerCancelled() { setStatus('Ready · no file selected'); }
+    function showScreen(id) { document.querySelectorAll('.screen').forEach(screen => screen.classList.toggle('active', screen.id === id)); }
+    function showSection(id) { document.querySelectorAll('.side-section').forEach(section => section.classList.toggle('active', section.id === id)); }
+    function setStatus(message, error = false) { document.querySelector('#statusText').textContent = message; document.querySelector('#statusbar').classList.toggle('error', error); }
+    function setHeader(type, label, verified = false) { document.querySelector('#fileType').textContent = type; document.querySelector('#fileLabel').textContent = label; document.querySelector('#verified').classList.toggle('visible', verified); }
+
+    ['#toolbarReset','#anotherButton'].forEach(selector => document.querySelector(selector).addEventListener('click', resetWorkspace));
+    document.querySelectorAll('[data-native-action]').forEach(control => control.addEventListener('click', () => {
+      const action = control.dataset.nativeAction;
+      setStatus(action === 'save' ? 'Opening Save As…' : action === 'pick-gif' ? 'Opening SoundGIF picker…' : 'Opening video picker…');
+      nativeAction(action);
+    }));
+    document.querySelector('#playButton').addEventListener('click', beginPlayback);
+    document.querySelector('#pauseButton').addEventListener('click', pausePlayback);
+    document.querySelector('#loopToggle').addEventListener('change', event => { if (audio) audio.loop = event.target.checked; });
+    document.querySelector('#volume').addEventListener('input', event => { if (audio) audio.volume = Number(event.target.value); });
+    document.querySelector('#qualitySelect').addEventListener('change', event => setQuality(event.target.value));
+
+    function setQuality(value) {
+      const settings = {
+        compact: ['480 px','12 FPS','Original · Opus 48 fallback'],
+        balanced: ['640 px','15 FPS','Original · Opus 64 fallback'],
+        high: ['960 px','24 FPS','Original · Opus 96 fallback']
+      }[value];
+      document.querySelector('#settingWidth').textContent = settings[0];
+      document.querySelector('#settingFps').textContent = settings[1];
+      document.querySelector('#settingAudio').textContent = settings[2];
+      nativeAction(`quality:${value}`);
+    }
+    function resetWorkspace() {
+      resetMedia(); showScreen('emptyScreen'); showSection('settingsSection');
+      document.querySelector('#transport').classList.remove('visible');
+      document.querySelector('#savedPath').textContent = '';
+      setHeader('EMPTY','No file loaded'); setStatus('New workspace');
+    }
+
+    function nativeDragActive(active) { viewer.classList.toggle('dragging', active); }
+    function nativeConversionStarted(inputPath) {
+      nativeDragActive(false); resetMedia(); showScreen('busyScreen'); showSection('settingsSection');
+      document.querySelector('#busyTitle').textContent = 'Converting video';
+      document.querySelector('#busyText').textContent = `Processing ${fileName(inputPath)}…`;
+      document.querySelector('#transport').classList.remove('visible');
+      setHeader('VIDEO', fileName(inputPath)); setStatus('Conversion in progress');
+    }
+    function nativeFileLoading(inputPath) {
+      nativeDragActive(false); resetMedia(); showScreen('busyScreen');
+      document.querySelector('#busyTitle').textContent = 'Opening SoundGIF';
+      document.querySelector('#busyText').textContent = `Verifying ${fileName(inputPath)}…`;
+      setHeader('GIF', fileName(inputPath)); setStatus('Reading file');
+    }
+    function nativeSoundGifReady(encodedGif, name, created) {
+      try {
+        const binary = atob(encodedGif), bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+        loadSoundGif(bytes, name, created);
+      } catch (error) { nativeOperationFailed(error.message); }
+    }
+    function nativeSaveComplete(path) {
+      document.querySelector('#savedPath').textContent = `Saved: ${path}`;
+      setStatus(`Saved ${fileName(path)}`);
+    }
+    function nativeOperationFailed(message) {
+      showScreen('emptyScreen'); showSection('settingsSection'); setHeader('ERROR','Operation failed');
+      setStatus(message, true);
+    }
+
+    function loadSoundGif(bytes, name, created) {
+      resetMedia();
+      payload = parseSoundGif(bytes);
+      const actualCrc = crc32(payload.audio);
+      if (actualCrc !== payload.checksum) throw new Error(`Audio checksum mismatch: expected ${hex(payload.checksum)}, got ${hex(actualCrc)}`);
+      gifUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/gif' }));
+      audioUrl = URL.createObjectURL(new Blob([payload.audio], { type: payload.mime || 'application/octet-stream' }));
+      audio = new Audio(audioUrl); audio.loop = payload.loop;
+      preview.src = gifUrl;
+      document.querySelector('#loopToggle').checked = payload.loop;
+      document.querySelector('#volume').value = '1';
+      document.querySelector('#resultName').textContent = name;
+      document.querySelector('#resultState').textContent = created ? 'Conversion complete' : 'SoundGIF verified';
+      document.querySelector('#metaCodec').textContent = payload.mime || 'Embedded audio';
+      document.querySelector('#metaSize').textContent = formatBytes(payload.audio.length);
+      document.querySelector('#metaOffset').textContent = `${payload.startMs} ms`;
+      document.querySelector('#metaIntegrity').textContent = `CRC ${hex(payload.checksum)}`;
+      document.querySelector('#resultNote').textContent = created ? 'Preview the result, then use Save SoundGIF as… to choose its final location.' : 'This GIF contains a valid SoundGIF audio extension.';
+      document.querySelector('#savedPath').textContent = '';
+      showScreen('previewScreen'); showSection('resultSection');
+      document.querySelector('#transport').classList.add('visible');
+      setHeader('SOUNDGIF', name, true); setStatus(created ? 'Conversion complete — ready to save' : 'SoundGIF opened');
+      beginPlayback();
+    }
+    function beginPlayback() {
+      if (!audio || !payload) return;
+      clearTimeout(startTimer); audio.pause(); audio.currentTime = 0; preview.src = '';
+      requestAnimationFrame(() => { preview.src = gifUrl; });
+      const start = () => audio.play().catch(() => setStatus('Press Play to start audio'));
+      if (payload.startMs) startTimer = setTimeout(start, payload.startMs); else start();
+    }
+    function pausePlayback() { clearTimeout(startTimer); if (audio) audio.pause(); setStatus('Audio paused'); }
+    function resetMedia() {
+      clearTimeout(startTimer); if (audio) audio.pause();
+      if (gifUrl) URL.revokeObjectURL(gifUrl); if (audioUrl) URL.revokeObjectURL(audioUrl);
+      audio = null; gifUrl = null; audioUrl = null; payload = null; preview.removeAttribute('src');
+    }
+
+    function parseSoundGif(bytes) {
+      if (bytes.length < 14 || ascii(bytes,0,3) !== 'GIF') throw new Error('The selected file is not a valid GIF.');
+      let cursor = 13; if (bytes[10] & 0x80) cursor += 3 << ((bytes[10] & 7) + 1);
+      while (cursor < bytes.length) {
+        const marker = bytes[cursor]; if (marker === 0x3b) break;
+        if (marker === 0x2c) {
+          need(bytes,cursor,10); const packed = bytes[cursor+9]; cursor += 10;
+          if (packed & 0x80) cursor += 3 << ((packed & 7) + 1);
+          need(bytes,cursor,1); cursor++; cursor = skipBlocks(bytes,cursor).cursor;
+        } else if (marker === 0x21) {
+          need(bytes,cursor,2); const label = bytes[cursor+1]; cursor += 2; let sound = false;
+          if (label === 0xff) {
+            need(bytes,cursor,1); const length = bytes[cursor]; need(bytes,cursor+1,length);
+            sound = length === 11 && ascii(bytes,cursor+1,11) === 'SNDGIF01001'; cursor += 1 + length;
+          }
+          const blocks = skipBlocks(bytes,cursor,sound); cursor = blocks.cursor; if (sound) return decodePayload(blocks.data);
+        } else throw new Error(`Invalid GIF block at byte ${cursor}.`);
+      }
+      throw new Error('This GIF does not contain SoundGIF audio.');
+    }
+    function skipBlocks(bytes,cursor,collect=false) {
+      const chunks=[]; let length=0;
+      while (true) { need(bytes,cursor,1); const size=bytes[cursor++]; if (!size) break; need(bytes,cursor,size); if (collect) { chunks.push(bytes.subarray(cursor,cursor+size)); length+=size; } cursor+=size; }
+      if (!collect) return {cursor}; const data=new Uint8Array(length); let offset=0; for (const chunk of chunks) { data.set(chunk,offset); offset+=chunk.length; } return {cursor,data};
+    }
+    function decodePayload(data) {
+      need(data,0,26); if (ascii(data,0,4)!=='SGA1') throw new Error('Invalid SoundGIF payload.'); if (data[4]!==1) throw new Error(`Unsupported SoundGIF version ${data[4]}.`);
+      const view=new DataView(data.buffer,data.byteOffset,data.byteLength), audioBig=view.getBigUint64(10,true); if (audioBig>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('Embedded audio is too large.');
+      const audioLength=Number(audioBig), mimeLength=view.getUint16(22,true), nameLength=view.getUint16(24,true), metadataEnd=26+mimeLength+nameLength;
+      if (metadataEnd+audioLength!==data.length) throw new Error('SoundGIF payload length is invalid.');
+      return {loop:Boolean(data[5]&1),startMs:view.getUint32(6,true),checksum:view.getUint32(18,true),mime:decoder.decode(data.subarray(26,26+mimeLength)),name:decoder.decode(data.subarray(26+mimeLength,metadataEnd)),audio:data.slice(metadataEnd)};
+    }
+    function need(bytes,start,length) { if (start<0 || start+length>bytes.length) throw new Error('The GIF is truncated.'); }
+    function ascii(bytes,start,length) { return String.fromCharCode(...bytes.subarray(start,start+length)); }
+    function crc32(bytes) { let crc=0xffffffff; for (const byte of bytes) { crc=(crc^byte)>>>0; for (let bit=0;bit<8;bit++) crc=((crc>>>1)^(0xedb88320&-(crc&1)))>>>0; } return (~crc)>>>0; }
+    function hex(value) { return value.toString(16).padStart(8,'0'); }
+    function fileName(path) { return path.split(/[\\/]/).pop() || path; }
+    function formatBytes(value) { if (value<1024) return `${value} B`; if (value<1048576) return `${(value/1024).toFixed(1)} KiB`; return `${(value/1048576).toFixed(1)} MiB`; }
+    window.addEventListener('error', event => setStatus(`Interface error: ${event.message}`, true));
+  </script>
+</body>
+</html>

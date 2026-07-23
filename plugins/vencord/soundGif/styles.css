@@ -1,0 +1,69 @@
+.vc-soundgif-anchor {
+    display: none;
+}
+
+.vc-soundgif-overlay-parent {
+    position: relative !important;
+}
+
+.vc-soundgif-overlay-host {
+    bottom: 8px;
+    left: 8px;
+    pointer-events: auto;
+    position: absolute;
+    z-index: 2;
+}
+
+.vc-soundgif-playback-image {
+    height: 100% !important;
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 100% !important;
+    z-index: 0;
+}
+
+.vc-soundgif-pill {
+    align-items: center;
+    background: rgb(0 0 0 / 72%);
+    border: 0;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: var(--font-primary);
+    font-size: 12px;
+    font-weight: 500;
+    gap: 5px;
+    height: 24px;
+    line-height: 1;
+    padding: 0 8px 0 6px;
+}
+
+.vc-soundgif-pill:hover {
+    background: rgb(0 0 0 / 88%);
+    color: #fff;
+}
+
+.vc-soundgif-pill:focus-visible {
+    outline: 2px solid var(--focus-primary);
+    outline-offset: 2px;
+}
+
+.vc-soundgif-pill svg {
+    fill: none;
+    height: 14px;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+    width: 14px;
+}
+
+.vc-soundgif-pill:not(.vc-soundgif-muted) svg {
+    color: var(--status-positive);
+}
+
+.vc-soundgif-muted {
+    color: rgb(255 255 255 / 72%);
+}

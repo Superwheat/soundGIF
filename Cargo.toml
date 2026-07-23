@@ -1,0 +1,23 @@
+[package]
+name = "soundgif"
+version = "0.1.2"
+edition = "2024"
+description = "Embed audio in GIF files without breaking ordinary GIF viewers"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Superwheat/soundGIF"
+rust-version = "1.85"
+keywords = ["audio", "gif", "media"]
+categories = ["command-line-utilities", "multimedia"]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+base64 = "0.22.1"
+rfd = "0.17.2"
+tao = "0.35.0"
+wry = { version = "0.55.1", default-features = false, features = ["os-webview"] }

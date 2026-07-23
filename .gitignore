@@ -1,0 +1,8 @@
+/target/
+/target-*/
+/.cache/
+/dist/
+/.release-stage/
+*.soundgif.tmp
+*.WebView2/
+*.log

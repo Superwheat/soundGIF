@@ -1,0 +1,15 @@
+SOUNDGIF - READY TO RUN
+=======================
+
+1. Open soundgif-player.exe.
+2. Drop an MP4 into the window to create a SoundGIF.
+3. Preview the result, then click "Save SoundGIF..." to choose where it goes.
+
+Keep ffmpeg.exe in the same folder as soundgif-player.exe. No installation or
+PATH setup is required.
+
+The command-line encoder is soundgif.exe. Run `soundgif help` in a terminal for
+its commands.
+
+SoundGIF is MIT-licensed; see LICENSE.txt. The packaged FFmpeg build is
+GPLv3-licensed; see FFMPEG-LICENSE.txt and FFMPEG-README.txt.
