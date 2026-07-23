@@ -1,6 +1,6 @@
 # SoundGIF
 
-SoundGIF stores compressed audio inside a valid GIF file. Normal GIF viewers ignore the audio
+SoundGIF stores compressed audio inside a GIF file. Normal GIF viewers ignore the audio
 data and display the animation. SoundGIF-aware apps and plugins find the embedded data, verify it,
 and play it with the animation.
 
