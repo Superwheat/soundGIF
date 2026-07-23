@@ -142,6 +142,22 @@
       width: 100%; height: 34px; padding: 0 9px; border: 1px solid #41454e; border-radius: 4px;
       color: #e0e2e6; background: #292c33; cursor: pointer;
     }
+    .advanced-toggle {
+      width: 100%; height: 32px; margin: 14px 0 0; display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid #3b3f47; border-radius: 4px; padding: 0 10px; background: #25282e; color: #b7bcc4; cursor: pointer;
+    }
+    .advanced-toggle:hover { background: #2b2f36; color: #e5e7ea; }
+    .advanced-toggle svg { width: 12px; height: 12px; transition: transform .15s ease; }
+    .advanced-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .advanced-panel { padding: 14px 0 2px; border-bottom: 1px solid #353941; }
+    .advanced-panel[hidden] { display: none; }
+    .advanced-field { margin-bottom: 13px; }
+    .advanced-field label { display: flex; justify-content: space-between; margin-bottom: 6px; color: #aeb3bc; font-size: 11px; }
+    .advanced-field small { color: #707783; }
+    .advanced-field input, .advanced-field select {
+      width: 100%; height: 32px; padding: 0 9px; border: 1px solid #41454e; border-radius: 4px;
+      color: #e0e2e6; background: #292c33;
+    }
     .spec-table { margin-top: 4px; border-top: 1px solid #353941; }
     .spec-row { min-height: 35px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #353941; font-size: 11px; }
     .spec-row span:first-child { color: #858b95; }
@@ -232,12 +248,20 @@
         <section class="side-section active" id="settingsSection">
           <h2 class="side-title">Conversion settings</h2>
           <p class="side-copy">These settings apply when you open or drop a video.</p>
-          <div class="field"><label for="qualitySelect">Output profile</label><select id="qualitySelect"><option value="compact">Compact</option><option value="balanced" selected>Balanced</option><option value="high">High quality</option></select></div>
+          <div class="field"><label for="qualitySelect">Output profile</label><select id="qualitySelect"><option value="original" selected>Original</option><option value="compact">Compact</option><option value="balanced">Balanced</option><option value="high">High quality</option><option value="custom">Custom</option></select></div>
           <div class="spec-table">
-            <div class="spec-row"><span>Maximum width</span><span id="settingWidth">640 px</span></div>
-            <div class="spec-row"><span>Frame rate</span><span id="settingFps">15 FPS</span></div>
-            <div class="spec-row"><span>Audio</span><span id="settingAudio">Original · Opus fallback</span></div>
+            <div class="spec-row"><span>Dimensions</span><span id="settingWidth">Source</span></div>
+            <div class="spec-row"><span>Frame rate</span><span id="settingFps">Source</span></div>
+            <div class="spec-row"><span>Colors</span><span id="settingColors">256</span></div>
+            <div class="spec-row"><span>Audio</span><span id="settingAudio">Original · Opus 96 fallback</span></div>
             <div class="spec-row"><span>Looping</span><span>Enabled</span></div>
+          </div>
+          <button class="advanced-toggle" id="advancedToggle" type="button" aria-expanded="false" aria-controls="advancedPanel">Advanced<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m2.5 4.5 3.5 3 3.5-3"/></svg></button>
+          <div class="advanced-panel" id="advancedPanel" hidden>
+            <div class="advanced-field"><label for="advancedFps"><span>Frame rate</span><small>Blank keeps source</small></label><input id="advancedFps" type="number" min="1" max="60" placeholder="Source"></div>
+            <div class="advanced-field"><label for="advancedWidth"><span>Width limit</span><small>Blank keeps source</small></label><input id="advancedWidth" type="number" min="32" max="4096" placeholder="Source"></div>
+            <div class="advanced-field"><label for="advancedColors"><span>Palette colors</span><small>2–256</small></label><input id="advancedColors" type="number" min="2" max="256" value="256"></div>
+            <div class="advanced-field"><label for="advancedAudio"><span>Opus fallback</span><small>Copied when possible</small></label><select id="advancedAudio"><option value="48k">48 kbps</option><option value="64k">64 kbps</option><option value="96k" selected>96 kbps</option><option value="128k">128 kbps</option></select></div>
           </div>
           <div class="format-note"><strong>Compatibility:</strong> The result remains a normal GIF. Applications without SoundGIF support simply ignore the embedded audio.</div>
           <div class="side-bottom"><button class="button primary large" id="sideVideo" data-native-action="pick-video">Open video to convert…</button></div>
@@ -291,7 +315,9 @@
     document.querySelector('#pauseButton').addEventListener('click', pausePlayback);
     document.querySelector('#loopToggle').addEventListener('change', event => { if (audio) audio.loop = event.target.checked; });
     document.querySelector('#volume').addEventListener('input', event => { if (audio) audio.volume = Number(event.target.value); });
-    document.querySelector('#qualitySelect').addEventListener('change', event => setQuality(event.target.value));
+    document.querySelector('#qualitySelect').addEventListener('change', event => setProfile(event.target.value));
+    document.querySelector('#advancedToggle').addEventListener('click', toggleAdvanced);
+    ['#advancedFps','#advancedWidth','#advancedColors','#advancedAudio'].forEach(selector => document.querySelector(selector).addEventListener('change', applyAdvanced));
     document.querySelector('#windowMinimize').addEventListener('click', () => nativeAction('window:minimize'));
     document.querySelector('#windowMaximize').addEventListener('click', () => nativeAction('window:toggle-maximize'));
     document.querySelector('#windowClose').addEventListener('click', () => nativeAction('window:close'));
@@ -302,16 +328,68 @@
       if (!event.target.closest('.window-controls')) nativeAction('window:toggle-maximize');
     });
 
-    function setQuality(value) {
-      const settings = {
-        compact: ['480 px','12 FPS','Original · Opus 48 fallback'],
-        balanced: ['640 px','15 FPS','Original · Opus 64 fallback'],
-        high: ['960 px','24 FPS','Original · Opus 96 fallback']
-      }[value];
-      document.querySelector('#settingWidth').textContent = settings[0];
-      document.querySelector('#settingFps').textContent = settings[1];
-      document.querySelector('#settingAudio').textContent = settings[2];
-      nativeAction(`quality:${value}`);
+    const profiles = {
+      original: { fps: 0, width: 0, colors: 256, audio: '96k' },
+      compact: { fps: 12, width: 480, colors: 96, audio: '48k' },
+      balanced: { fps: 15, width: 640, colors: 128, audio: '64k' },
+      high: { fps: 24, width: 960, colors: 192, audio: '96k' }
+    };
+    let conversionSettings = { ...profiles.original };
+
+    function setProfile(value) {
+      if (value === 'custom') {
+        setAdvancedOpen(true);
+        return;
+      }
+      conversionSettings = { ...profiles[value] };
+      syncAdvancedFields();
+      updateConversionSummary();
+      sendConversionSettings();
+    }
+    function toggleAdvanced() {
+      setAdvancedOpen(document.querySelector('#advancedPanel').hidden);
+    }
+    function setAdvancedOpen(open) {
+      document.querySelector('#advancedPanel').hidden = !open;
+      document.querySelector('#advancedToggle').setAttribute('aria-expanded', String(open));
+    }
+    function optionalNumber(selector, minimum, maximum) {
+      const raw = document.querySelector(selector).value.trim();
+      if (!raw) return 0;
+      const value = Number(raw);
+      return Number.isInteger(value) && value >= minimum && value <= maximum ? value : null;
+    }
+    function applyAdvanced() {
+      const fps = optionalNumber('#advancedFps', 1, 60);
+      const width = optionalNumber('#advancedWidth', 32, 4096);
+      const colors = optionalNumber('#advancedColors', 2, 256);
+      if (fps === null || width === null || colors === null || colors === 0) {
+        setStatus('Check the advanced conversion values', true);
+        return;
+      }
+      conversionSettings = {
+        fps, width, colors,
+        audio: document.querySelector('#advancedAudio').value
+      };
+      document.querySelector('#qualitySelect').value = 'custom';
+      updateConversionSummary();
+      sendConversionSettings();
+      setStatus('Custom conversion settings applied');
+    }
+    function syncAdvancedFields() {
+      document.querySelector('#advancedFps').value = conversionSettings.fps || '';
+      document.querySelector('#advancedWidth').value = conversionSettings.width || '';
+      document.querySelector('#advancedColors').value = conversionSettings.colors;
+      document.querySelector('#advancedAudio').value = conversionSettings.audio;
+    }
+    function updateConversionSummary() {
+      document.querySelector('#settingWidth').textContent = conversionSettings.width ? `Up to ${conversionSettings.width} px` : 'Source';
+      document.querySelector('#settingFps').textContent = conversionSettings.fps ? `${conversionSettings.fps} FPS` : 'Source';
+      document.querySelector('#settingColors').textContent = conversionSettings.colors;
+      document.querySelector('#settingAudio').textContent = `Original · Opus ${conversionSettings.audio.replace('k','')} fallback`;
+    }
+    function sendConversionSettings() {
+      nativeAction(`settings:${conversionSettings.fps}:${conversionSettings.width}:${conversionSettings.colors}:${conversionSettings.audio}`);
     }
     function resetWorkspace() {
       resetMedia(); showScreen('emptyScreen'); showSection('settingsSection');

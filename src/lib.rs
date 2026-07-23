@@ -48,10 +48,10 @@ impl Default for ConversionOptions {
     fn default() -> Self {
         Self {
             ffmpeg: None,
-            fps: 15,
-            width: 640,
-            palette_colors: 128,
-            audio_bitrate: "64k".to_owned(),
+            fps: 0,
+            width: 0,
+            palette_colors: 256,
+            audio_bitrate: "96k".to_owned(),
         }
     }
 }
@@ -101,10 +101,10 @@ fn print_help() {
            --start-ms <NUMBER>   Audio start offset in milliseconds (default: 0)\n\
            --no-loop             Do not loop audio with the GIF\n\n\
          VIDEO OPTIONS:\n\
-           --fps <NUMBER>        GIF frames per second (default: 15)\n\
-           --width <PIXELS>      Maximum GIF width (default: 640)\n\
-           --colors <NUMBER>     GIF palette colors, 2-256 (default: 128)\n\
-           --audio-bitrate <N>   Opus fallback bitrate (default: 64k)\n\
+           --fps <NUMBER>        GIF frames per second; 0 keeps source (default: 0)\n\
+           --width <PIXELS>      Width limit; 0 keeps source (default: 0)\n\
+           --colors <NUMBER>     GIF palette colors, 2-256 (default: 256)\n\
+           --audio-bitrate <N>   Opus fallback bitrate (default: 96k)\n\
            --ffmpeg <PATH>       Path to ffmpeg executable\n\n\
          Existing SoundGIF data is replaced when embedding again.",
         version = env!("CARGO_PKG_VERSION")
@@ -168,11 +168,11 @@ pub fn convert_video_to_soundgif(
     if !input.is_file() {
         return Err(format!("input video '{}' does not exist", input.display()));
     }
-    if !(1..=60).contains(&options.fps) {
-        return Err("video FPS must be between 1 and 60".to_owned());
+    if options.fps != 0 && !(1..=60).contains(&options.fps) {
+        return Err("video FPS must be 0 or between 1 and 60".to_owned());
     }
-    if !(32..=4096).contains(&options.width) {
-        return Err("GIF width must be between 32 and 4096 pixels".to_owned());
+    if options.width != 0 && !(32..=4096).contains(&options.width) {
+        return Err("GIF width must be 0 or between 32 and 4096 pixels".to_owned());
     }
     if !(2..=256).contains(&options.palette_colors) {
         return Err("GIF palette must contain between 2 and 256 colors".to_owned());
@@ -230,9 +230,24 @@ pub fn convert_video_to_soundgif(
 }
 
 fn gif_filter(options: &ConversionOptions) -> String {
+    let mut transforms = Vec::new();
+    if options.fps != 0 {
+        transforms.push(format!("fps={}", options.fps));
+    }
+    if options.width != 0 {
+        transforms.push(format!(
+            "scale=w='min({},iw)':h=-2:flags=lanczos",
+            options.width
+        ));
+    }
+    let transform_prefix = if transforms.is_empty() {
+        String::new()
+    } else {
+        format!("{},", transforms.join(","))
+    };
     format!(
-        "[0:v]fps={},scale=w='min({},iw)':h=-2:flags=lanczos,split[v1][v2];[v1]palettegen=stats_mode=diff:max_colors={}:reserve_transparent=0[p];[v2][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
-        options.fps, options.width, options.palette_colors
+        "[0:v]{transform_prefix}split[v1][v2];[v1]palettegen=stats_mode=diff:max_colors={}:reserve_transparent=0[p];[v2][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+        options.palette_colors
     )
 }
 
@@ -1226,6 +1241,13 @@ mod tests {
     #[test]
     fn crc32_matches_standard_vector() {
         assert_eq!(crc32(b"123456789"), 0xcbf4_3926);
+    }
+
+    #[test]
+    fn source_profile_does_not_add_frame_rate_or_scale_filters() {
+        let filter = gif_filter(&ConversionOptions::default());
+        assert!(!filter.contains("fps="));
+        assert!(!filter.contains("scale=w="));
     }
 
     #[test]

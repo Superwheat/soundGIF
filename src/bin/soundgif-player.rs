@@ -18,13 +18,13 @@ enum AppEvent {
     WindowDrag,
     WindowMinimize,
     WindowToggleMaximize,
-    SetQuality(String),
+    SetConversionOptions(ConversionOptions),
     DragActive(bool),
     Converted(Result<ReadyFile, String>),
     Loaded(Result<ReadyFile, String>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum UiAction {
     PickVideo,
     PickGif,
@@ -33,9 +33,12 @@ enum UiAction {
     WindowDrag,
     WindowMinimize,
     WindowToggleMaximize,
-    QualityCompact,
-    QualityBalanced,
-    QualityHigh,
+    ConversionSettings {
+        fps: u32,
+        width: u32,
+        palette_colors: u16,
+        audio_bitrate: String,
+    },
 }
 
 struct ReadyFile {
@@ -87,9 +90,18 @@ fn run() -> Result<(), String> {
                     UiAction::WindowDrag => AppEvent::WindowDrag,
                     UiAction::WindowMinimize => AppEvent::WindowMinimize,
                     UiAction::WindowToggleMaximize => AppEvent::WindowToggleMaximize,
-                    UiAction::QualityCompact => AppEvent::SetQuality("compact".to_owned()),
-                    UiAction::QualityBalanced => AppEvent::SetQuality("balanced".to_owned()),
-                    UiAction::QualityHigh => AppEvent::SetQuality("high".to_owned()),
+                    UiAction::ConversionSettings {
+                        fps,
+                        width,
+                        palette_colors,
+                        audio_bitrate,
+                    } => AppEvent::SetConversionOptions(ConversionOptions {
+                        ffmpeg: None,
+                        fps,
+                        width,
+                        palette_colors,
+                        audio_bitrate,
+                    }),
                 };
                 let _ = ipc_proxy.send_event(event);
             }
@@ -142,7 +154,7 @@ fn run() -> Result<(), String> {
     window.set_visible(true);
 
     let mut converting = false;
-    let mut quality = "balanced".to_owned();
+    let mut conversion_options = ConversionOptions::default();
     let mut current_file: Option<PathBuf> = None;
     let mut current_name = "soundgif.gif".to_owned();
     let mut current_directory: Option<PathBuf> = None;
@@ -151,7 +163,9 @@ fn run() -> Result<(), String> {
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
         match event {
-            Event::UserEvent(AppEvent::SetQuality(value)) => quality = value,
+            Event::UserEvent(AppEvent::SetConversionOptions(options)) => {
+                conversion_options = options
+            }
             Event::UserEvent(AppEvent::WindowDrag) => {
                 let _ = window.drag_window();
             }
@@ -205,7 +219,7 @@ fn run() -> Result<(), String> {
                 let label = js_string(&input.display().to_string());
                 let _ = webview.evaluate_script(&format!("nativeConversionStarted({label});"));
                 let finished_proxy = event_proxy.clone();
-                let options = options_for_quality(&quality);
+                let options = conversion_options.clone();
                 std::thread::spawn(move || {
                     let result = (|| {
                         let suggested_name = suggested_output_name(&input);
@@ -338,26 +352,6 @@ fn ready_file(
     })
 }
 
-fn options_for_quality(quality: &str) -> ConversionOptions {
-    let mut options = ConversionOptions::default();
-    match quality {
-        "compact" => {
-            options.fps = 12;
-            options.width = 480;
-            options.palette_colors = 96;
-            options.audio_bitrate = "48k".to_owned();
-        }
-        "high" => {
-            options.fps = 24;
-            options.width = 960;
-            options.palette_colors = 192;
-            options.audio_bitrate = "96k".to_owned();
-        }
-        _ => {}
-    }
-    options
-}
-
 fn is_video(path: &Path) -> bool {
     matches!(
         extension(path).as_deref(),
@@ -384,11 +378,32 @@ fn action_from_message(message: &str) -> Option<UiAction> {
         "window:drag" => Some(UiAction::WindowDrag),
         "window:minimize" => Some(UiAction::WindowMinimize),
         "window:toggle-maximize" => Some(UiAction::WindowToggleMaximize),
-        "quality:compact" => Some(UiAction::QualityCompact),
-        "quality:balanced" => Some(UiAction::QualityBalanced),
-        "quality:high" => Some(UiAction::QualityHigh),
-        _ => None,
+        _ => parse_conversion_settings(message),
     }
+}
+
+fn parse_conversion_settings(message: &str) -> Option<UiAction> {
+    let fields: Vec<&str> = message.strip_prefix("settings:")?.split(':').collect();
+    if fields.len() != 4 {
+        return None;
+    }
+    let fps = fields[0].parse().ok()?;
+    let width = fields[1].parse().ok()?;
+    let palette_colors = fields[2].parse().ok()?;
+    let audio_bitrate = fields[3];
+    if (fps != 0 && !(1..=60).contains(&fps))
+        || (width != 0 && !(32..=4096).contains(&width))
+        || !(2..=256).contains(&palette_colors)
+        || !matches!(audio_bitrate, "48k" | "64k" | "96k" | "128k")
+    {
+        return None;
+    }
+    Some(UiAction::ConversionSettings {
+        fps,
+        width,
+        palette_colors,
+        audio_bitrate: audio_bitrate.to_owned(),
+    })
 }
 
 fn suggested_output_name(input: &Path) -> String {
@@ -485,13 +500,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn quality_presets_have_distinct_conversion_settings() {
-        let compact = options_for_quality("compact");
-        let balanced = options_for_quality("balanced");
-        let high = options_for_quality("high");
-        assert!(compact.width < balanced.width);
-        assert!(balanced.width < high.width);
-        assert!(compact.fps < high.fps);
+    fn conversion_settings_route_exact_values() {
+        assert_eq!(
+            action_from_message("settings:30:1280:224:128k"),
+            Some(UiAction::ConversionSettings {
+                fps: 30,
+                width: 1280,
+                palette_colors: 224,
+                audio_bitrate: "128k".to_owned(),
+            })
+        );
+        assert!(action_from_message("settings:61:1280:224:128k").is_none());
     }
 
     #[test]
@@ -523,9 +542,15 @@ mod tests {
             ("window:drag", UiAction::WindowDrag),
             ("window:minimize", UiAction::WindowMinimize),
             ("window:toggle-maximize", UiAction::WindowToggleMaximize),
-            ("quality:compact", UiAction::QualityCompact),
-            ("quality:balanced", UiAction::QualityBalanced),
-            ("quality:high", UiAction::QualityHigh),
+            (
+                "settings:0:0:256:96k",
+                UiAction::ConversionSettings {
+                    fps: 0,
+                    width: 0,
+                    palette_colors: 256,
+                    audio_bitrate: "96k".to_owned(),
+                },
+            ),
         ];
         for (message, expected) in routes {
             assert_eq!(action_from_message(message), Some(expected));

@@ -32,6 +32,10 @@ Conversion uses FFmpeg. SoundGIF first tries to copy compatible audio without re
 that is not possible, it falls back to variable-bitrate Opus. GIF frames use a generated palette,
 rectangle-difference updates, and configurable size and frame-rate limits.
 
+The Original profile keeps the video's dimensions and frame timing. Compact, Balanced, and High
+quality apply limits instead. Advanced settings accept a custom frame rate, width limit, palette
+size, and Opus fallback bitrate.
+
 ![SoundGIF desktop app](assets/app-preview.png)
 
 Build both executables:
