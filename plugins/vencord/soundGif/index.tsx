@@ -720,7 +720,7 @@ function SoundGifAccessories({ message }: { message: Message; }) {
 
 export default definePlugin({
     name: "SoundGIF",
-    description: "Plays normalized audio embedded in SoundGIF attachments",
+    description: "Plays audio embedded in SoundGIF attachments",
     tags: ["Chat", "Media"],
     authors: [{ name: "Superwheat", id: 0n }],
     settings,

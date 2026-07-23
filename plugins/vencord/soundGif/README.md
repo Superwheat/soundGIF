@@ -2,6 +2,8 @@
 
 Plays SoundGIF audio in Discord on every desktop platform supported by Vencord.
 
+![SoundGIF settings](preview.png)
+
 ## Install
 
 Copy this folder to `Vencord/src/userplugins/soundGif`, then run:
