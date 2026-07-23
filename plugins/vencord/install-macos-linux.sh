@@ -101,7 +101,7 @@ VENCORD_DIR="${VENCORD_DIR:-$MANAGED_VENCORD}"
 printf 'Vencord source: %s\n' "$VENCORD_DIR"
 
 if [ ! -d "$VENCORD_DIR/.git" ]; then
-    if [ -d "$VENCORD_DIR" ] && [ -n "$(find "$VENCORD_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+    if [ -d "$VENCORD_DIR" ] && [ -n "$(ls -A "$VENCORD_DIR" 2>/dev/null)" ]; then
         echo "$VENCORD_DIR exists but is not a Vencord Git checkout." >&2
         exit 1
     fi
