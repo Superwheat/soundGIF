@@ -373,14 +373,18 @@ fn run_ffmpeg(binary: &Path, args: &[&std::ffi::OsStr], stage: &str) -> Result<(
 }
 
 fn background_command(program: &Path) -> Command {
-    let mut command = Command::new(program);
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let mut command = Command::new(program);
         command.creation_flags(CREATE_NO_WINDOW);
+        command
     }
-    command
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new(program)
+    }
 }
 
 struct ConversionTemp {
