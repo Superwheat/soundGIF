@@ -1245,9 +1245,11 @@ mod tests {
 
     #[test]
     fn source_profile_does_not_add_frame_rate_or_scale_filters() {
-        let mut options = ConversionOptions::default();
-        options.fps = 0;
-        options.width = 0;
+        let options = ConversionOptions {
+            fps: 0,
+            width: 0,
+            ..ConversionOptions::default()
+        };
         let filter = gif_filter(&options);
         assert!(!filter.contains("fps="));
         assert!(!filter.contains("scale=w="));
