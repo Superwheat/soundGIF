@@ -32,6 +32,8 @@ Conversion uses FFmpeg. SoundGIF first tries to copy compatible audio without re
 that is not possible, it falls back to variable-bitrate Opus. GIF frames use a generated palette,
 rectangle-difference updates, and configurable size and frame-rate limits.
 
+![SoundGIF desktop app](assets/app-preview.png)
+
 Build both executables:
 
 ```sh
@@ -49,12 +51,14 @@ Windows adds the `.exe` suffix.
 
 ### Platform requirements
 
-- Windows: Microsoft Edge WebView2 Runtime and FFmpeg.
-- macOS: the built-in WKWebView and FFmpeg.
-- Linux: WebKitGTK 4.1, GTK 3, and FFmpeg.
+- Windows: Microsoft Edge WebView2 Runtime.
+- macOS: the built-in WKWebView.
+- Linux: WebKitGTK 4.1 and GTK 3.
 
-SoundGIF checks for an `ffmpeg` executable beside the app first, then checks `PATH`. On Windows the
-sibling executable is named `ffmpeg.exe`.
+SoundGIF uses an existing FFmpeg install from beside the app, `PATH`, or common install locations.
+If it cannot find one during a conversion, it installs FFmpeg with WinGet on Windows, Homebrew on
+macOS, or the system package manager on Linux. macOS needs Homebrew. Linux may show an
+authentication prompt.
 
 Ubuntu/Debian build dependencies:
 
@@ -153,5 +157,4 @@ The GitHub Actions workflow checks Windows, macOS, and Linux builds.
 ## Licenses
 
 The Rust app and SoundGIF format implementation are MIT licensed. The Vencord plugin is
-GPL-3.0-or-later because it is built against Vencord. Packaged FFmpeg binaries keep their own
-license and source-offer requirements.
+GPL-3.0-or-later because it is built against Vencord.

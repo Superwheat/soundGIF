@@ -328,6 +328,18 @@ fn resolve_ffmpeg(explicit: Option<&Path>) -> Result<PathBuf> {
             Err(format!("ffmpeg was not found at '{}'", path.display()))
         };
     }
+
+    if let Some(path) = discover_ffmpeg() {
+        return Ok(path);
+    }
+
+    install_ffmpeg()?;
+    discover_ffmpeg().ok_or_else(|| {
+        "FFmpeg was installed, but SoundGIF could not find the executable. Restart SoundGIF or pass its path with --ffmpeg.".to_owned()
+    })
+}
+
+fn discover_ffmpeg() -> Option<PathBuf> {
     if let Ok(executable) = env::current_exe() {
         let sibling = executable.with_file_name(if cfg!(windows) {
             "ffmpeg.exe"
@@ -335,25 +347,204 @@ fn resolve_ffmpeg(explicit: Option<&Path>) -> Result<PathBuf> {
             "ffmpeg"
         });
         if sibling.is_file() {
-            return Ok(sibling);
+            return Some(sibling);
         }
     }
+
     let command = if cfg!(windows) {
         "ffmpeg.exe"
     } else {
         "ffmpeg"
     };
-    match background_command(Path::new(command))
+    if command_works(Path::new(command)) {
+        return Some(PathBuf::from(command));
+    }
+
+    platform_ffmpeg_paths()
+        .into_iter()
+        .find(|path| command_works(path))
+}
+
+fn command_works(command: &Path) -> bool {
+    matches!(
+        background_command(command)
         .arg("-version")
         .stdout(process::Stdio::null())
         .stderr(process::Stdio::null())
-        .status()
-    {
-        Ok(status) if status.success() => Ok(PathBuf::from(command)),
-        _ => Err(format!(
-            "FFmpeg is required for video conversion. Put {command} beside SoundGIF Player or add ffmpeg to PATH."
-        )),
+        .status(),
+        Ok(status) if status.success()
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn platform_ffmpeg_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
+        let winget = PathBuf::from(&local_app_data)
+            .join("Microsoft")
+            .join("WinGet");
+        paths.push(winget.join("Links").join("ffmpeg.exe"));
+        collect_windows_ffmpeg(&winget.join("Packages"), 5, &mut paths);
     }
+    if let Some(program_files) = env::var_os("ProgramFiles") {
+        paths.push(
+            PathBuf::from(program_files)
+                .join("ffmpeg")
+                .join("bin")
+                .join("ffmpeg.exe"),
+        );
+    }
+    paths
+}
+
+#[cfg(target_os = "windows")]
+fn collect_windows_ffmpeg(directory: &Path, remaining_depth: usize, paths: &mut Vec<PathBuf>) {
+    if remaining_depth == 0 || paths.len() >= 8 {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_windows_ffmpeg(&path, remaining_depth - 1, paths);
+        } else if path
+            .file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("ffmpeg.exe"))
+        {
+            paths.push(path);
+        }
+        if paths.len() >= 8 {
+            break;
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn platform_ffmpeg_paths() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from("/opt/homebrew/bin/ffmpeg"),
+        PathBuf::from("/usr/local/bin/ffmpeg"),
+    ]
+}
+
+#[cfg(target_os = "linux")]
+fn platform_ffmpeg_paths() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from("/usr/bin/ffmpeg"),
+        PathBuf::from("/usr/local/bin/ffmpeg"),
+        PathBuf::from("/home/linuxbrew/.linuxbrew/bin/ffmpeg"),
+        PathBuf::from("/snap/bin/ffmpeg"),
+    ]
+}
+
+#[cfg(target_os = "windows")]
+fn install_ffmpeg() -> Result<()> {
+    run_installer(
+        Path::new("winget.exe"),
+        &[
+            "install",
+            "--id",
+            "Gyan.FFmpeg.Essentials",
+            "--exact",
+            "--source",
+            "winget",
+            "--silent",
+            "--accept-package-agreements",
+            "--accept-source-agreements",
+            "--disable-interactivity",
+        ],
+        "Windows Package Manager",
+    )
+}
+
+#[cfg(target_os = "macos")]
+fn install_ffmpeg() -> Result<()> {
+    let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew", "brew"]
+        .into_iter()
+        .map(Path::new)
+        .find(|path| command_works_with_argument(path, "--version"))
+        .ok_or_else(|| {
+            "FFmpeg is missing and Homebrew was not found. Install Homebrew, then try the conversion again."
+                .to_owned()
+        })?;
+    run_installer(brew, &["install", "ffmpeg"], "Homebrew")
+}
+
+#[cfg(target_os = "linux")]
+fn install_ffmpeg() -> Result<()> {
+    let managers: &[(&str, &[&str])] = &[
+        ("apt-get", &["install", "-y", "ffmpeg"]),
+        ("dnf", &["install", "-y", "ffmpeg"]),
+        ("zypper", &["--non-interactive", "install", "ffmpeg"]),
+        ("pacman", &["-S", "--noconfirm", "ffmpeg"]),
+    ];
+    let (manager, arguments) = managers
+        .iter()
+        .find(|(manager, _)| command_works_with_argument(Path::new(manager), "--version"))
+        .ok_or_else(|| {
+            "FFmpeg is missing and no supported package manager was found. Install FFmpeg, then try the conversion again."
+                .to_owned()
+        })?;
+
+    if command_works_with_argument(Path::new("pkexec"), "--version") {
+        let mut elevated_arguments = Vec::with_capacity(arguments.len() + 1);
+        elevated_arguments.push(*manager);
+        elevated_arguments.extend_from_slice(arguments);
+        run_installer(
+            Path::new("pkexec"),
+            &elevated_arguments,
+            "the system package manager",
+        )
+    } else {
+        run_installer(Path::new(manager), arguments, "the system package manager")
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn command_works_with_argument(command: &Path, argument: &str) -> bool {
+    matches!(
+        background_command(command)
+            .arg(argument)
+            .stdout(process::Stdio::null())
+            .stderr(process::Stdio::null())
+            .status(),
+        Ok(status) if status.success()
+    )
+}
+
+fn run_installer(program: &Path, args: &[&str], source: &str) -> Result<()> {
+    let result = background_command(program)
+        .args(args)
+        .output()
+        .map_err(|error| {
+            format!("FFmpeg is missing and SoundGIF could not start {source}: {error}")
+        })?;
+    if result.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&result.stderr).trim().to_owned();
+    let stdout = String::from_utf8_lossy(&result.stdout).trim().to_owned();
+    let details = if stderr.is_empty() { stdout } else { stderr };
+    if details.is_empty() {
+        Err(format!("{source} could not install FFmpeg"))
+    } else {
+        Err(format!(
+            "{source} could not install FFmpeg: {}",
+            truncate_message(&details, 600)
+        ))
+    }
+}
+
+fn truncate_message(message: &str, limit: usize) -> String {
+    if message.chars().count() <= limit {
+        return message.to_owned();
+    }
+    let mut shortened: String = message.chars().take(limit).collect();
+    shortened.push('…');
+    shortened
 }
 
 fn run_ffmpeg(binary: &Path, args: &[&std::ffi::OsStr], stage: &str) -> Result<()> {

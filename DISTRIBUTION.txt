@@ -3,18 +3,20 @@ SOUNDGIF 0.1.2
 
 Open soundgif-player (soundgif-player.exe on Windows) to start the desktop app.
 
-Video conversion requires FFmpeg. SoundGIF checks for ffmpeg beside the player,
-then checks PATH.
+Video conversion uses FFmpeg. SoundGIF first checks beside the player, PATH, and
+common install locations. If FFmpeg is missing, SoundGIF installs it when the
+first conversion starts.
 
 Windows:
-  The full Windows release includes ffmpeg.exe.
+  SoundGIF installs FFmpeg through WinGet.
 
 macOS:
-  Install FFmpeg with `brew install ffmpeg`.
+  SoundGIF installs FFmpeg through Homebrew. Homebrew must already be installed.
   The app is not code-signed. macOS may require you to approve it in
   System Settings > Privacy & Security after the first launch.
 
 Linux:
-  Install FFmpeg and the WebKitGTK 4.1 runtime through your package manager.
+  SoundGIF installs FFmpeg through the system package manager. The install may
+  show an authentication prompt. WebKitGTK 4.1 must already be installed.
 
 The command-line tool is named soundgif. Run `soundgif help` for commands.
