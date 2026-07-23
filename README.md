@@ -98,9 +98,9 @@ The Vencord package includes rerunnable installers:
 
 - Windows: double-click `install-windows.cmd`.
 - macOS: double-click `install-macos.command`.
-- Linux: run `bash install-macos-linux.sh`.
+- Linux: run `bash install-linux.sh`.
 
-Each run updates the SoundGIF and Vencord source checkouts, restores
+Each installer is one standalone file. Each run updates the SoundGIF and Vencord source checkouts, restores
 `Vencord/src/userplugins/soundGif`, rebuilds Vencord, and runs Vencord's injector. This also
 repairs the custom build if a later Vencord update replaces it. Restart Discord and enable
 **SoundGIF** in Vencord settings afterward.

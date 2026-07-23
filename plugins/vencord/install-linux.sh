@@ -1,24 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-finish() {
-    EXIT_CODE=$?
-    trap - EXIT
-
-    echo
-    if [ "$EXIT_CODE" -ne 0 ]; then
-        echo "SoundGIF installation failed."
-    else
-        echo "SoundGIF installation finished."
-    fi
-    read -r -p "Press Return to close."
-    exit "$EXIT_CODE"
-}
-trap finish EXIT
-
 SOUNDGIF_REPOSITORY="https://github.com/Superwheat/soundGIF.git"
 VENCORD_REPOSITORY="https://github.com/Vendicated/Vencord.git"
-MANAGED_ROOT="$HOME/Library/Application Support/SoundGIF"
+MANAGED_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/soundgif"
 VENCORD_DIR="${VENCORD_DIR:-}"
 SOUNDGIF_CHECKOUT="$MANAGED_ROOT/source"
 MANAGED_VENCORD="$MANAGED_ROOT/Vencord"

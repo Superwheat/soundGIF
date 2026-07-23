@@ -10,7 +10,7 @@ In the release archive, use the installer beside the `soundGif` folder:
 
 - Windows: double-click `install-windows.cmd`.
 - macOS: double-click `install-macos.command`.
-- Linux: run `bash install-macos-linux.sh`.
+- Linux: run `bash install-linux.sh`.
 
 The same installer updates or repairs the custom Vencord build. For a manual install, copy this
 folder to `Vencord/src/userplugins/soundGif`, then run:

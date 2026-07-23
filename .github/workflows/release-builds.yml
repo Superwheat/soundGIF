@@ -23,10 +23,9 @@ jobs:
           cp -R plugins/vencord/soundGif "$name/"
           cp plugins/vencord/README.md "$name/README.md"
           cp plugins/vencord/install-windows.cmd "$name/"
-          cp plugins/vencord/install-windows.ps1 "$name/"
-          cp plugins/vencord/install-macos-linux.sh "$name/"
           cp plugins/vencord/install-macos.command "$name/"
-          chmod +x "$name/install-macos-linux.sh" "$name/install-macos.command"
+          cp plugins/vencord/install-linux.sh "$name/"
+          chmod +x "$name/install-macos.command" "$name/install-linux.sh"
           zip -r "$name.zip" "$name"
       - uses: actions/upload-artifact@v4
         with:
