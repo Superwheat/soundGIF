@@ -48,10 +48,10 @@ impl Default for ConversionOptions {
     fn default() -> Self {
         Self {
             ffmpeg: None,
-            fps: 0,
-            width: 0,
-            palette_colors: 256,
-            audio_bitrate: "96k".to_owned(),
+            fps: 15,
+            width: 640,
+            palette_colors: 128,
+            audio_bitrate: "64k".to_owned(),
         }
     }
 }
@@ -101,10 +101,10 @@ fn print_help() {
            --start-ms <NUMBER>   Audio start offset in milliseconds (default: 0)\n\
            --no-loop             Do not loop audio with the GIF\n\n\
          VIDEO OPTIONS:\n\
-           --fps <NUMBER>        GIF frames per second; 0 keeps source (default: 0)\n\
-           --width <PIXELS>      Width limit; 0 keeps source (default: 0)\n\
-           --colors <NUMBER>     GIF palette colors, 2-256 (default: 256)\n\
-           --audio-bitrate <N>   Opus fallback bitrate (default: 96k)\n\
+           --fps <NUMBER>        GIF frames per second; 0 keeps source (default: 15)\n\
+           --width <PIXELS>      Width limit; 0 keeps source (default: 640)\n\
+           --colors <NUMBER>     GIF palette colors, 2-256 (default: 128)\n\
+           --audio-bitrate <N>   Opus fallback bitrate (default: 64k)\n\
            --ffmpeg <PATH>       Path to ffmpeg executable\n\n\
          Existing SoundGIF data is replaced when embedding again.",
         version = env!("CARGO_PKG_VERSION")
@@ -1245,7 +1245,10 @@ mod tests {
 
     #[test]
     fn source_profile_does_not_add_frame_rate_or_scale_filters() {
-        let filter = gif_filter(&ConversionOptions::default());
+        let mut options = ConversionOptions::default();
+        options.fps = 0;
+        options.width = 0;
+        let filter = gif_filter(&options);
         assert!(!filter.contains("fps="));
         assert!(!filter.contains("scale=w="));
     }

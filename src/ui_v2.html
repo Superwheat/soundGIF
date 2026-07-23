@@ -248,20 +248,20 @@
         <section class="side-section active" id="settingsSection">
           <h2 class="side-title">Conversion settings</h2>
           <p class="side-copy">These settings apply when you open or drop a video.</p>
-          <div class="field"><label for="qualitySelect">Output profile</label><select id="qualitySelect"><option value="original" selected>Original</option><option value="compact">Compact</option><option value="balanced">Balanced</option><option value="high">High quality</option><option value="custom">Custom</option></select></div>
+          <div class="field"><label for="qualitySelect">Output profile</label><select id="qualitySelect"><option value="original">Original</option><option value="compact">Compact</option><option value="balanced" selected>Balanced</option><option value="high">High quality</option><option value="custom">Custom</option></select></div>
           <div class="spec-table">
-            <div class="spec-row"><span>Dimensions</span><span id="settingWidth">Source</span></div>
-            <div class="spec-row"><span>Frame rate</span><span id="settingFps">Source</span></div>
-            <div class="spec-row"><span>Colors</span><span id="settingColors">256</span></div>
-            <div class="spec-row"><span>Audio</span><span id="settingAudio">Original · Opus 96 fallback</span></div>
+            <div class="spec-row"><span>Dimensions</span><span id="settingWidth">Up to 640 px</span></div>
+            <div class="spec-row"><span>Frame rate</span><span id="settingFps">15 FPS</span></div>
+            <div class="spec-row"><span>Colors</span><span id="settingColors">128</span></div>
+            <div class="spec-row"><span>Audio</span><span id="settingAudio">Original · Opus 64 fallback</span></div>
             <div class="spec-row"><span>Looping</span><span>Enabled</span></div>
           </div>
           <button class="advanced-toggle" id="advancedToggle" type="button" aria-expanded="false" aria-controls="advancedPanel">Advanced<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m2.5 4.5 3.5 3 3.5-3"/></svg></button>
           <div class="advanced-panel" id="advancedPanel" hidden>
-            <div class="advanced-field"><label for="advancedFps"><span>Frame rate</span><small>Blank keeps source</small></label><input id="advancedFps" type="number" min="1" max="60" placeholder="Source"></div>
-            <div class="advanced-field"><label for="advancedWidth"><span>Width limit</span><small>Blank keeps source</small></label><input id="advancedWidth" type="number" min="32" max="4096" placeholder="Source"></div>
-            <div class="advanced-field"><label for="advancedColors"><span>Palette colors</span><small>2–256</small></label><input id="advancedColors" type="number" min="2" max="256" value="256"></div>
-            <div class="advanced-field"><label for="advancedAudio"><span>Opus fallback</span><small>Copied when possible</small></label><select id="advancedAudio"><option value="48k">48 kbps</option><option value="64k">64 kbps</option><option value="96k" selected>96 kbps</option><option value="128k">128 kbps</option></select></div>
+            <div class="advanced-field"><label for="advancedFps"><span>Frame rate</span><small>Blank keeps source</small></label><input id="advancedFps" type="number" min="1" max="60" value="15" placeholder="Source"></div>
+            <div class="advanced-field"><label for="advancedWidth"><span>Width limit</span><small>Blank keeps source</small></label><input id="advancedWidth" type="number" min="32" max="4096" value="640" placeholder="Source"></div>
+            <div class="advanced-field"><label for="advancedColors"><span>Palette colors</span><small>2–256</small></label><input id="advancedColors" type="number" min="2" max="256" value="128"></div>
+            <div class="advanced-field"><label for="advancedAudio"><span>Opus fallback</span><small>Copied when possible</small></label><select id="advancedAudio"><option value="48k">48 kbps</option><option value="64k" selected>64 kbps</option><option value="96k">96 kbps</option><option value="128k">128 kbps</option></select></div>
           </div>
           <div class="format-note"><strong>Compatibility:</strong> The result remains a normal GIF. Applications without SoundGIF support simply ignore the embedded audio.</div>
           <div class="side-bottom"><button class="button primary large" id="sideVideo" data-native-action="pick-video">Open video to convert…</button></div>
@@ -334,13 +334,14 @@
       balanced: { fps: 15, width: 640, colors: 128, audio: '64k' },
       high: { fps: 24, width: 960, colors: 192, audio: '96k' }
     };
-    let conversionSettings = { ...profiles.original };
+    let conversionSettings = { ...profiles.balanced };
 
     function setProfile(value) {
       if (value === 'custom') {
         setAdvancedOpen(true);
         return;
       }
+      setAdvancedOpen(false);
       conversionSettings = { ...profiles[value] };
       syncAdvancedFields();
       updateConversionSummary();
