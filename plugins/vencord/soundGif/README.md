@@ -6,7 +6,14 @@ Plays SoundGIF audio in Discord on every desktop platform supported by Vencord.
 
 ## Install
 
-Copy this folder to `Vencord/src/userplugins/soundGif`, then run:
+In the release archive, use the installer beside the `soundGif` folder:
+
+- Windows: double-click `install-windows.cmd`.
+- macOS: double-click `install-macos.command`.
+- Linux: run `bash install-macos-linux.sh`.
+
+The same installer updates or repairs the custom Vencord build. For a manual install, copy this
+folder to `Vencord/src/userplugins/soundGif`, then run:
 
 ```sh
 pnpm build

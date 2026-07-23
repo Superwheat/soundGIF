@@ -12,6 +12,28 @@ permissions:
   contents: read
 
 jobs:
+  vencord:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package Vencord plugin and installers
+        run: |
+          name="SoundGIF-Vencord-${{ inputs.version }}"
+          mkdir "$name"
+          cp -R plugins/vencord/soundGif "$name/"
+          cp plugins/vencord/README.md "$name/README.md"
+          cp plugins/vencord/install-windows.cmd "$name/"
+          cp plugins/vencord/install-windows.ps1 "$name/"
+          cp plugins/vencord/install-macos-linux.sh "$name/"
+          cp plugins/vencord/install-macos.command "$name/"
+          chmod +x "$name/install-macos-linux.sh" "$name/install-macos.command"
+          zip -r "$name.zip" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vencord-plugin
+          path: SoundGIF-Vencord-${{ inputs.version }}.zip
+          if-no-files-found: error
+
   windows:
     runs-on: windows-latest
     steps:

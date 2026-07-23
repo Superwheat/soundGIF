@@ -94,8 +94,19 @@ Run `soundgif help` for conversion and playback options.
 
 ## Vencord plugin
 
-Copy `plugins/vencord/soundGif` into `Vencord/src/userplugins/soundGif`, rebuild Vencord, restart
-Discord, and enable **SoundGIF** in Vencord settings.
+The Vencord package includes rerunnable installers:
+
+- Windows: double-click `install-windows.cmd`.
+- macOS: double-click `install-macos.command`.
+- Linux: run `bash install-macos-linux.sh`.
+
+Each run updates the SoundGIF and Vencord source checkouts, restores
+`Vencord/src/userplugins/soundGif`, rebuilds Vencord, and runs Vencord's injector. This also
+repairs the custom build if a later Vencord update replaces it. Restart Discord and enable
+**SoundGIF** in Vencord settings afterward.
+
+Git, Node.js, and pnpm are required because Vencord does not load external user plugins without
+being built from source.
 
 The plugin detects the SoundGIF application block inside the file. It does not depend on a special
 filename. It keeps GIF and audio loops on one timeline, pauses when the GIF is not playing, applies
